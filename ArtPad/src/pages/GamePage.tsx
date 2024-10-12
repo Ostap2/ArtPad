@@ -104,6 +104,34 @@ const GamePage: React.FC = () => {
     setSelectedMode(mode); // Оновлюємо вибраний режим
   };
 
+  const clearCanvas = () => {
+    setLines([]); // Очищуємо всі лінії
+    const ctx = canvasRef.current?.getContext('2d');
+    ctx?.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height); // Очищаємо канвас
+    localStorage.removeItem('savedLines'); // Очищаємо локальне сховище
+  };
+
+  const saveLinesToLocalStorage = (newLines: any[]) => {
+    localStorage.setItem('savedLines', JSON.stringify(newLines)); // Зберігаємо лінії в локальному сховищі
+  };
+
+  const loadLinesFromLocalStorage = () => {
+    const savedLines = localStorage.getItem('savedLines');
+    if (savedLines) {
+      const loadedLines = JSON.parse(savedLines);
+      setLines(loadedLines); // Завантажуємо лінії з локального сховища
+    }
+  };
+
+  useEffect(() => {
+    loadLinesFromLocalStorage(); // Завантажуємо лінії при монтуванні компонента
+  }, []);
+
+  useEffect(() => {
+    saveLinesToLocalStorage(lines); // Зберігаємо лінії в локальному сховищі при їх зміні
+    redraw(); // Перемальовуємо лінії після зміни
+  }, [lines]); // Викликаємо при зміні ліній
+
   return (
     <div style={{ display: 'flex', width: '100%', height: '600px' }}> {/* Батьківський контейнер з флексом */}
       {/* Сайдбар */}
@@ -111,6 +139,7 @@ const GamePage: React.FC = () => {
         <h2>Вибір режиму</h2>
         <button onClick={() => handleModeChange('default')}>Стандартний</button>
         <button onClick={() => handleModeChange('red')}>Червоний</button>
+        <button onClick={clearCanvas}>Очистити</button> {/* Кнопка очищення */}
         {/* Додайте інші кнопки для режимів тут */}
       </div>
 
