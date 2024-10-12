@@ -4,11 +4,25 @@ const GamePage: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [selectedMode, setSelectedMode] = useState<string>('default'); // Для збереження вибраного режиму
-  const [lines, setLines] = useState<{ x: number; y: number; color: string }[]>([]); // Для збереження ліній
+  const [lines, setLines] = useState<{ points: { x: number; y: number }[]; color: string }[]>([]); // Для збереження ліній
 
   const startDrawing = (e: MouseEvent) => {
     setIsDrawing(true);
-    draw(e);
+    const ctx = canvasRef.current?.getContext('2d');
+    if (!ctx) return;
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // Додаємо нову лінію з першою точкою
+    setLines((prevLines) => [
+      ...prevLines,
+      { points: [{ x, y }], color: selectedMode === 'red' ? 'red' : 'black' },
+    ]);
+
+    ctx.beginPath();
+    ctx.moveTo(x, y);
   };
 
   const draw = (e: MouseEvent) => {
@@ -21,23 +35,16 @@ const GamePage: React.FC = () => {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    ctx.lineWidth = 2; // Товщина лінії
-    ctx.lineCap = 'round'; // Кінець лінії
-    ctx.strokeStyle = selectedMode === 'red' ? 'red' : 'black'; // Колір лінії залежно від вибраного режиму
+    // Додаємо точку до останньої лінії
+    setLines((prevLines) => {
+      const newLines = [...prevLines];
+      const currentLine = newLines[newLines.length - 1];
+      currentLine.points.push({ x, y });
+      return newLines;
+    });
 
-    if (lines.length === 0) {
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-    } else {
-      ctx.lineTo(x, y);
-      ctx.stroke();
-    }
-
-    // Зберігаємо координати для відображення
-    setLines((prevLines) => [...prevLines, { x, y, color: ctx.strokeStyle }]);
+    ctx.lineTo(x, y);
     ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(x, y);
   };
 
   const stopDrawing = () => {
@@ -51,7 +58,7 @@ const GamePage: React.FC = () => {
     if (!canvas) return;
 
     // Встановлюємо фіксовані розміри для канваса
-    canvas.width = 900; // Фіксована ширина на 100 пікселів більше
+    canvas.width = 900; // Фіксована ширина
     canvas.height = 600; // Фіксована висота
 
     // Додаємо обробники подій для малювання
@@ -78,12 +85,17 @@ const GamePage: React.FC = () => {
     ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height); // Очищаємо канвас
 
     // Перемальовуємо всі лінії
-    lines.forEach((line, index) => {
+    lines.forEach((line) => {
       ctx.strokeStyle = line.color;
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(index > 0 ? lines[index - 1].x : line.x, index > 0 ? lines[index - 1].y : line.y);
-      ctx.lineTo(line.x, line.y);
+      line.points.forEach((point, index) => {
+        if (index === 0) {
+          ctx.moveTo(point.x, point.y);
+        } else {
+          ctx.lineTo(point.x, point.y);
+        }
+      });
       ctx.stroke();
     });
   };
